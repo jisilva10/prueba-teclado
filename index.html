@@ -1,545 +1,515 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Marcador de Pádel</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Barlow:wght@500;600;700&display=swap">
+<!-- Fuente sin bloquear: si la red de la tele está lenta al prender, igual se ve con la de reserva -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Big+Shoulders+Display:800,900|Barlow:600,700&display=swap" media="print" onload="this.media='all'">
+<!--
+  Hecho para el navegador de la tele (Samsung Tizen, Chromium 47+), igual que TeleUSFQ:
+  HTML + CSS + JavaScript ES5. Sin CSS grid, sin gap en flex, sin variables CSS,
+  sin funciones flecha, sin pointer events. Todo va en un lienzo fijo de 1920x1080
+  que se escala a la pantalla. Tema oscuro fijo: se usa de noche bajo los faros.
+-->
 <style>
-/* Layout: pantalla de TV dividida por la red; cada mitad muestra a la pareja que está en ese lado; franja de sponsors abajo. Tema oscuro fijo: se usa de noche bajo los faros. */
-:root {
-  --turf: #0d2a4a;
-  --turf-deep: #081d35;
-  --line: #e8eef6;
-  --muted: #9db0c6;
-  --team-a: #f3d54e;
-  --team-b: #ff8f70;
-  --panel: rgba(232, 238, 246, 0.07);
-  --font-score: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
-  --font-ui: "Barlow", "Segoe UI", system-ui, sans-serif;
-  color-scheme: dark;
-}
-html, body { height: 100%; }
-body {
-  background: var(--turf-deep);
-  color: var(--line);
-  font-family: var(--font-ui);
-  overflow: hidden;
-}
-.app {
-  height: 100%;
-  display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  gap: clamp(6px, 1.4vmin, 14px);
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: clamp(8px, 1.6vmin, 18px);
-  background:
-    radial-gradient(120% 90% at 50% 40%, var(--turf) 0%, var(--turf-deep) 75%);
-}
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.chip {
-  font-weight: 700;
-  font-size: clamp(11px, 1.9vmin, 20px);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.35em 0.8em;
-  border: 1px solid rgba(232, 238, 246, 0.35);
-  border-radius: 999px;
-  color: var(--line);
-  white-space: nowrap;
-}
-.chip.next { color: var(--muted); border-style: dashed; }
-.sets {
-  display: flex;
-  gap: clamp(4px, 1vmin, 10px);
-  align-items: center;
-  font-family: var(--font-score);
-  font-weight: 800;
-  font-size: clamp(14px, 3vmin, 34px);
-  font-variant-numeric: tabular-nums;
-}
-.set {
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  background: var(--panel);
-  border-radius: 6px;
-  padding: 0.1em 0.45em;
-  line-height: 1.05;
-  text-align: center;
-}
-.set .a { color: var(--team-a); }
-.set .b { color: var(--team-b); }
-.court {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 0;
-  border: 2px solid rgba(232, 238, 246, 0.55);
-  border-radius: 4px;
-}
-.net {
-  position: absolute;
-  top: -6px;
-  bottom: -6px;
-  left: 50%;
-  width: 0;
-  border-left: 4px dashed var(--line);
-  transform: translateX(-2px);
-  opacity: 0.85;
-}
-.half {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  align-items: center;
-  justify-items: center;
-  min-width: 0;
-  padding: clamp(6px, 1.5vmin, 18px);
-  transition: background-color 0.4s;
-}
-.half.flash { background: rgba(232, 238, 246, 0.12); }
-.team {
-  font-weight: 700;
-  font-size: clamp(12px, 2.6vmin, 30px);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-}
-.dot { width: 0.7em; height: 0.7em; border-radius: 50%; display: inline-block; }
-.points {
-  font-family: var(--font-score);
-  font-weight: 900;
-  font-size: clamp(64px, 30vmin, 360px);
-  line-height: 0.9;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-.games {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4em;
-  font-size: clamp(12px, 2.4vmin, 28px);
-  color: var(--muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.games b {
-  font-family: var(--font-score);
-  font-size: 2.2em;
-  color: var(--line);
-  font-weight: 800;
-  letter-spacing: 0;
-}
-.status {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--line);
-  color: var(--turf-deep);
-  font-weight: 700;
-  font-size: clamp(12px, 3vmin, 34px);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.4em 1em;
-  border-radius: 6px;
-  white-space: nowrap;
-  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.45);
-}
-.toast {
-  position: absolute;
-  left: 50%;
-  bottom: 8%;
-  transform: translateX(-50%);
-  background: rgba(8, 29, 53, 0.92);
-  border: 1px solid rgba(232, 238, 246, 0.4);
-  font-weight: 600;
-  font-size: clamp(12px, 2.4vmin, 26px);
-  padding: 0.45em 1em;
-  border-radius: 8px;
-  text-align: center;
-  max-width: 90%;
-}
-.hold {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 6px;
-  background: var(--line);
-  transform-origin: left;
-  transform: scaleX(0);
-}
-.sponsor {
-  height: clamp(54px, 15vmin, 170px);
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  position: relative;
-  overflow: hidden;
-}
-.sponsor .slide {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6em;
-  padding: 0 4%;
-  font-weight: 700;
-  font-size: clamp(14px, 4.4vmin, 50px);
-  text-align: center;
-  opacity: 0;
-  transition: opacity 0.6s;
-}
-.sponsor .slide.on { opacity: 1; }
-.sponsor .tag {
-  position: absolute;
-  right: 8px;
-  top: 6px;
-  font-size: clamp(9px, 1.4vmin, 14px);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  opacity: 0.7;
-  z-index: 2;
-}
-.keys {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-.keys button {
-  font: inherit;
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--line);
-  background: var(--panel);
-  border: 1px solid rgba(232, 238, 246, 0.3);
-  border-radius: 8px;
-  padding: 10px 6px;
-  touch-action: manipulation;
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: pointer;
-}
-.keys button:focus-visible { outline: 2px solid var(--team-a); outline-offset: 2px; }
-.keys button kbd {
-  display: block;
-  font-family: var(--font-score);
-  font-size: 22px;
-  font-weight: 800;
-}
-.keys small { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
-@media (prefers-reduced-motion: reduce) {
-  .half, .sponsor .slide { transition: none; }
-}
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #081d35;
+  }
+  ::-webkit-scrollbar { display: none; }
+  * { box-sizing: border-box; -webkit-box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  #stage {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    overflow: hidden; color: #e8eef6;
+    font-family: 'Barlow', 'Segoe UI', Arial, sans-serif; font-weight: 700;
+    background: #081d35;
+    background-image: radial-gradient(120% 90% at 50% 40%, #0d2a4a 0%, #081d35 75%);
+    -webkit-transform-origin: 0 0; transform-origin: 0 0;
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+    padding: 28px 48px;
+  }
+
+  /* ---------- Barra de arriba ---------- */
+  #topbar {
+    height: 72px;
+    display: -webkit-flex; display: flex;
+    -webkit-align-items: center; align-items: center;
+    -webkit-justify-content: space-between; justify-content: space-between;
+  }
+  .chip {
+    display: inline-block; margin-right: 14px;
+    font-size: 28px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 8px 24px; border: 2px solid rgba(232,238,246,0.35); border-radius: 999px;
+    white-space: nowrap;
+  }
+  .chip.next { color: #9db0c6; border-style: dashed; }
+  #sets { font-size: 0; white-space: nowrap; }
+  .set {
+    display: inline-block; vertical-align: middle; margin-left: 12px;
+    padding: 2px 16px; border-radius: 8px; background: rgba(232,238,246,0.07);
+    font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; font-weight: 800;
+    font-size: 34px; line-height: 1.05; text-align: center;
+  }
+  .set span { display: block; }
+
+  /* ---------- Cancha ---------- */
+  #court {
+    position: relative; margin-top: 20px;
+    -webkit-flex: 1; flex: 1;
+    display: -webkit-flex; display: flex;
+    border: 3px solid rgba(232,238,246,0.55); border-radius: 6px;
+  }
+  .half {
+    -webkit-flex: 1; flex: 1; min-width: 0;
+    display: -webkit-flex; display: flex;
+    -webkit-flex-direction: column; flex-direction: column;
+    -webkit-align-items: center; align-items: center;
+    -webkit-justify-content: space-between; justify-content: space-between;
+    padding: 28px 20px;
+    -webkit-transition: background-color 0.4s; transition: background-color 0.4s;
+  }
+  .half.flash { background-color: rgba(232,238,246,0.12); }
+  .team { font-size: 44px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+  .dot {
+    display: inline-block; vertical-align: middle; margin: -6px 18px 0 0;
+    width: 30px; height: 30px; border-radius: 50%;
+  }
+  .points {
+    font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; font-weight: 900;
+    font-size: 420px; line-height: 0.9; letter-spacing: -0.01em;
+  }
+  .games {
+    font-size: 36px; color: #9db0c6; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;
+  }
+  .games b {
+    font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+    font-size: 80px; color: #e8eef6; font-weight: 800; letter-spacing: 0;
+    margin-left: 14px; vertical-align: -6px;
+  }
+  #net {
+    position: absolute; top: -10px; bottom: -10px; left: 50%;
+    margin-left: -3px; border-left: 6px dashed #e8eef6; opacity: 0.85;
+  }
+  #status {
+    position: absolute; left: 50%; top: 50%;
+    -webkit-transform: translate(-50%, -50%); transform: translate(-50%, -50%);
+    background: #e8eef6; color: #081d35;
+    font-size: 40px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 14px 40px; border-radius: 8px; white-space: nowrap;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.45);
+  }
+  #toast {
+    position: absolute; left: 50%; bottom: 8%;
+    -webkit-transform: translateX(-50%); transform: translateX(-50%);
+    background: rgba(8,29,53,0.92); border: 2px solid rgba(232,238,246,0.4);
+    font-size: 34px; font-weight: 600; padding: 14px 36px; border-radius: 10px;
+    white-space: nowrap;
+  }
+  #hold {
+    position: absolute; left: 0; right: 0; top: 0; height: 8px; background: #e8eef6;
+    -webkit-transform-origin: 0 0; transform-origin: 0 0;
+    -webkit-transform: scaleX(0); transform: scaleX(0);
+  }
+
+  /* ---------- Sponsors ---------- */
+  #sponsor {
+    position: relative; height: 150px; margin-top: 20px;
+    border-radius: 8px; overflow: hidden;
+  }
+  .slide {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    padding: 0 4%; text-align: center; white-space: nowrap;
+    font-size: 60px; line-height: 150px;
+    opacity: 0;
+    -webkit-transition: opacity 0.6s; transition: opacity 0.6s;
+  }
+  .slide.on { opacity: 1; }
+  #tag {
+    position: absolute; right: 14px; top: 10px; z-index: 2;
+    font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.7;
+  }
+
+  /* ---------- Botones de prueba (en la tele no salen) ---------- */
+  #keys { height: 100px; margin-top: 16px; display: -webkit-flex; display: flex; }
+  #keys button {
+    -webkit-flex: 1; flex: 1; margin-left: 12px;
+    font-family: inherit; font-weight: 600; font-size: 18px; color: #e8eef6;
+    background: rgba(232,238,246,0.07); border: 2px solid rgba(232,238,246,0.3);
+    border-radius: 10px; cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+  }
+  #keys button:first-child { margin-left: 0; }
+  #keys kbd {
+    display: block; font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+    font-size: 32px; font-weight: 800;
+  }
+  #keys small { display: block; color: #9db0c6; font-size: 14px; font-weight: 500; }
+
+  #debug {
+    position: absolute; left: 8px; bottom: 8px; z-index: 200; display: none;
+    font: 18px/1.3 monospace; color: #0f0; background: rgba(0,0,0,0.75); padding: 8px 12px;
+    white-space: pre;
+  }
 </style>
+</head>
+<body>
+<div id="stage">
+  <div id="topbar">
+    <div><span class="chip" id="mode">Punto de oro</span><span class="chip next" id="modeNext" hidden></span></div>
+    <div id="sets"></div>
+  </div>
 
-<div class="app" id="app">
-  <header class="topbar">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <span class="chip" id="mode">Punto de oro</span>
-      <span class="chip next" id="modeNext" hidden></span>
-    </div>
-    <div class="sets" id="sets" aria-label="Sets terminados"></div>
-  </header>
-
-  <main class="court" id="court">
-    <section class="half" id="halfL" aria-live="polite">
+  <div id="court">
+    <div class="half" id="halfL">
       <div class="team" id="teamL"></div>
       <div class="points" id="ptsL">0</div>
       <div class="games">Juegos <b id="gamesL">0</b></div>
-    </section>
-    <section class="half" id="halfR" aria-live="polite">
+    </div>
+    <div class="half" id="halfR">
       <div class="team" id="teamR"></div>
       <div class="points" id="ptsR">0</div>
       <div class="games">Juegos <b id="gamesR">0</b></div>
-    </section>
-    <div class="net" aria-hidden="true"></div>
-    <div class="status" id="status" hidden></div>
-    <div class="toast" id="toast" hidden></div>
-    <div class="hold" id="hold" aria-hidden="true"></div>
-  </main>
+    </div>
+    <div id="net"></div>
+    <div id="status" hidden></div>
+    <div id="toast" hidden></div>
+    <div id="hold"></div>
+  </div>
 
-  <aside class="sponsor" id="sponsor" aria-label="Sponsors">
-    <span class="tag">Ejemplo</span>
-  </aside>
+  <div id="sponsor"><span id="tag">Ejemplo</span></div>
 
-  <nav class="keys" id="keys" aria-label="Botones de prueba">
-    <button id="k1" data-key="1"><kbd>U</kbd>Punto izquierda<small>mantener: deshacer</small></button>
-    <button id="k2" data-key="2"><kbd>D</kbd>Punto derecha<small>mantener: deshacer</small></button>
-    <button id="k3" data-key="3"><kbd>3</kbd>Nuevo partido<small>mantener 2 s</small></button>
-    <button id="k4" data-key="4"><kbd>4</kbd>Cambiar modo<small>ventaja / oro</small></button>
-  </nav>
+  <div id="keys">
+    <button data-key="1"><kbd>U</kbd>Punto izquierda<small>mantener: deshacer</small></button>
+    <button data-key="2"><kbd>D</kbd>Punto derecha<small>mantener: deshacer</small></button>
+    <button data-key="3"><kbd>3</kbd>Nuevo partido<small>mantener 2 s</small></button>
+    <button data-key="4"><kbd>4</kbd>Cambiar modo<small>ventaja / oro</small></button>
+  </div>
+
+  <div id="debug"></div>
 </div>
 
 <script>
-/* ---------- Lógica de puntaje (pura) ---------- */
-const MODES = { oro: "Punto de oro", ventaja: "Ventaja" };
+(function () {
+  'use strict';
 
-function compute(events, startMode) {
-  const s = {
-    mode: startMode, modeNext: null,
-    sets: [], setsWon: [0, 0], games: [0, 0], pts: [0, 0],
-    tb: false, gameIdx: 0, flips: 0, over: false, winner: null,
-    lastFlipAt: -1, lastScorerSide: null
+  var $ = function (id) { return document.getElementById(id); };
+  function forEach(arr, fn) { for (var i = 0; i < arr.length; i++) fn(arr[i], i); }
+  function setTransform(el, value) { el.style.webkitTransform = value; el.style.transform = value; }
+  function setTransition(el, value) {
+    el.style.webkitTransition = value ? '-webkit-transform ' + value : 'none';
+    el.style.transition = value ? 'transform ' + value : 'none';
+  }
+
+  // ================= DIAGNÓSTICO =================
+  // ?debug=1 muestra qué tecla llega (útil para probar el teclado o los botones en la tele)
+  var DEBUG = /[?&]debug=1/.test(location.search);
+  var logLines = [];
+  function log(msg) {
+    if (window.console && console.log) console.log('[marcador] ' + msg);
+    if (!DEBUG) return;
+    logLines.push(msg);
+    if (logLines.length > 8) logLines.shift();
+    $('debug').style.display = 'block';
+    $('debug').textContent = logLines.join('\n');
+  }
+  window.onerror = function (msg, src, line) {
+    log('ERROR ' + msg + ' @' + line);
+    return true; // nunca dejar la tele en una pantalla rota
   };
-  events.forEach((ev, i) => {
-    if (ev.t === "m") {
-      if (s.pts[0] === 0 && s.pts[1] === 0) { s.mode = ev.mode; s.modeNext = null; }
-      else s.modeNext = ev.mode;
+
+  // El lienzo de 1920x1080 se ajusta a la resolución que diga la tele
+  function fitStage() {
+    var w = window.innerWidth || document.documentElement.clientWidth || 1920;
+    var h = window.innerHeight || document.documentElement.clientHeight || 1080;
+    var s = Math.min(w / 1920, h / 1080);
+    var stage = $('stage');
+    setTransform(stage, 'scale(' + s + ')');
+    stage.style.left = Math.round((w - 1920 * s) / 2) + 'px';
+    stage.style.top = Math.round((h - 1080 * s) / 2) + 'px';
+  }
+  window.onresize = fitStage;
+  fitStage();
+
+  // ================= PUNTAJE (puro) =================
+  var MODES = { oro: 'Punto de oro', ventaja: 'Ventaja' };
+
+  function compute(events, startMode) {
+    var s = {
+      mode: startMode, modeNext: null,
+      sets: [], setsWon: [0, 0], games: [0, 0], pts: [0, 0],
+      tb: false, gameIdx: 0, flips: 0, over: false, winner: null,
+      lastFlipAt: -1, lastScorerSide: null
+    };
+    forEach(events, function (ev, i) {
+      if (ev.t === 'm') {
+        if (s.pts[0] === 0 && s.pts[1] === 0) { s.mode = ev.mode; s.modeNext = null; }
+        else s.modeNext = ev.mode;
+        return;
+      }
+      if (s.over) return;
+      var team = (s.flips % 2 === 0) === (ev.side === 'L') ? 0 : 1;
+      s.lastScorerSide = ev.side;
+      var flipsBefore = s.flips;
+      point(s, team);
+      if (s.flips !== flipsBefore) s.lastFlipAt = i;
+    });
+    return s;
+  }
+
+  function point(s, team) {
+    var o = 1 - team;
+    if (s.tb) {
+      s.pts[team]++;
+      if (s.pts[team] >= 7 && s.pts[team] - s.pts[o] >= 2) return winGame(s, team);
+      if ((s.pts[0] + s.pts[1]) % 6 === 0) s.flips++;
       return;
     }
-    if (s.over) return;
-    const team = (s.flips % 2 === 0) === (ev.side === "L") ? 0 : 1;
-    s.lastScorerSide = ev.side;
-    const flipsBefore = s.flips;
-    point(s, team);
-    if (s.flips !== flipsBefore) s.lastFlipAt = i;
+    var a = s.pts[team], b = s.pts[o];
+    if (s.mode === 'oro') {
+      if (a >= 3 && (b < 3 || a === 3 && b === 3)) return winGame(s, team);
+      s.pts[team]++;
+    } else {
+      if (a >= 3 && a - b >= 1) return winGame(s, team);
+      s.pts[team]++;
+      if (s.pts[0] === 4 && s.pts[1] === 4) s.pts = [3, 3];
+    }
+  }
+
+  function winGame(s, team) {
+    var o = 1 - team, wasTb = s.tb;
+    s.games[team]++;
+    s.pts = [0, 0];
+    s.tb = false;
+    s.gameIdx++;
+    if (s.gameIdx % 2 === 1) s.flips++;
+    if (s.modeNext) { s.mode = s.modeNext; s.modeNext = null; }
+    var setWon = wasTb || (s.games[team] >= 6 && s.games[team] - s.games[o] >= 2);
+    if (setWon) {
+      s.setsWon[team]++;
+      s.sets.push(s.games.slice());
+      s.games = [0, 0];
+      s.gameIdx = 0;
+      if (s.setsWon[team] === 2) { s.over = true; s.winner = team; }
+    } else if (s.games[0] === 6 && s.games[1] === 6) {
+      s.tb = true;
+    }
+  }
+
+  function label(s, team) {
+    var p = s.pts[team];
+    if (s.tb) return String(p);
+    if (p === 4) return 'AD';
+    return ['0', '15', '30', '40'][Math.min(p, 3)];
+  }
+
+  // ================= ESTADO Y PANTALLA =================
+  var TEAMS = [
+    { name: 'Pareja A', color: '#f3d54e' },
+    { name: 'Pareja B', color: '#ff8f70' }
+  ];
+  var STORE_KEY = 'marcador-padel-v1';
+  var data = { startMode: 'oro', events: [] };
+  try {
+    var saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (saved && saved.events && saved.events.length !== undefined) data = saved;
+  } catch (e) {}
+  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) {} }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2200);
+  }
+
+  function render(justScored) {
+    var s = compute(data.events, data.startMode);
+    var leftTeam = s.flips % 2 === 0 ? 0 : 1;
+    forEach([['L', leftTeam], ['R', 1 - leftTeam]], function (pair) {
+      var side = pair[0], t = TEAMS[pair[1]];
+      $('team' + side).innerHTML = '<span class="dot" style="background:' + t.color + '"></span>' + t.name;
+      $('pts' + side).textContent = label(s, pair[1]);
+      $('pts' + side).style.color = t.color;
+      $('games' + side).textContent = s.games[pair[1]];
+    });
+    $('mode').textContent = MODES[s.mode] + (s.tb ? ' · Tie-break' : '');
+    $('modeNext').hidden = !s.modeNext;
+    if (s.modeNext) $('modeNext').textContent = 'Próximo juego: ' + MODES[s.modeNext];
+    var html = '';
+    forEach(s.sets, function (g) {
+      html += '<div class="set"><span style="color:' + TEAMS[0].color + '">' + g[0] +
+        '</span><span style="color:' + TEAMS[1].color + '">' + g[1] + '</span></div>';
+    });
+    $('sets').innerHTML = html;
+
+    var status = '';
+    if (s.over) status = 'Gana ' + TEAMS[s.winner].name + ' · Mantén 3 para nuevo partido';
+    else if (!s.tb && s.pts[0] === 3 && s.pts[1] === 3) status = s.mode === 'oro' ? 'Punto de oro' : 'Iguales';
+    $('status').hidden = !status;
+    $('status').textContent = status;
+
+    if (justScored) {
+      var half = $(s.lastScorerSide === 'R' ? 'halfR' : 'halfL');
+      half.className = 'half flash';
+      setTimeout(function () { half.className = 'half'; }, 450);
+      if (s.lastFlipAt === data.events.length - 1) toast('Cambio de lado');
+    }
+  }
+
+  // ================= TECLAS: toque = acción, mantener = acción larga =================
+  var HOLD_MS = 2000;
+  var pressed = {};
+
+  // keyCode porque los navegadores de tele viejos no traen e.key ni e.code.
+  // U (85) hace lo mismo que 1 (izquierda) y D (68) lo mismo que 2 (derecha).
+  var KEYCODES = { 85: '1', 49: '1', 97: '1', 68: '2', 50: '2', 98: '2', 51: '3', 99: '3', 52: '4', 100: '4' };
+  var KEYNAMES = { u: '1', '1': '1', d: '2', '2': '2', '3': '3', '4': '4' };
+
+  function keyFromEvent(e) {
+    var code = e.keyCode || e.which;
+    if (KEYCODES[code]) return KEYCODES[code];
+    var name = (e.key || '').toLowerCase();
+    return KEYNAMES[name] || null;
+  }
+
+  function resetBar() {
+    var bar = $('hold');
+    setTransition(bar, '');
+    setTransform(bar, 'scaleX(0)');
+  }
+
+  function press(k) {
+    if (pressed[k]) return;
+    var bar = $('hold');
+    resetBar();
+    void bar.offsetWidth; // fija el inicio antes de animar
+    setTransition(bar, HOLD_MS + 'ms linear');
+    setTransform(bar, 'scaleX(1)');
+    pressed[k] = {
+      held: false,
+      timer: setTimeout(function () { pressed[k].held = true; resetBar(); longAction(k); }, HOLD_MS)
+    };
+  }
+
+  function release(k) {
+    var p = pressed[k];
+    if (!p) return;
+    clearTimeout(p.timer);
+    delete pressed[k];
+    resetBar();
+    if (!p.held) tapAction(k);
+  }
+
+  function tapAction(k) {
+    if (k === '1' || k === '2') {
+      data.events.push({ t: 'p', side: k === '1' ? 'L' : 'R' });
+      save(); render(true);
+    } else if (k === '3') {
+      toast('Mantén 2 segundos para empezar un partido nuevo');
+    } else if (k === '4') {
+      var s = compute(data.events, data.startMode);
+      var next = (s.modeNext || s.mode) === 'oro' ? 'ventaja' : 'oro';
+      if (data.events.length === 0) data.startMode = next;
+      else data.events.push({ t: 'm', mode: next });
+      save(); render(false);
+      toast('Modo: ' + MODES[next]);
+    }
+  }
+
+  function longAction(k) {
+    if (k === '1' || k === '2') {
+      var i = data.events.length - 1;
+      while (i >= 0 && data.events[i].t !== 'p') i--;
+      if (i < 0) { toast('No hay puntos para deshacer'); return; }
+      data.events.splice(i, 1);
+      save(); render(false);
+      toast('Último punto deshecho');
+    } else if (k === '3') {
+      var s = compute(data.events, data.startMode);
+      data = { startMode: s.modeNext || s.mode, events: [] };
+      save(); render(false);
+      toast('Partido nuevo');
+    } else if (k === '4') {
+      tapAction('4');
+    }
+  }
+
+  document.addEventListener('keydown', function (e) {
+    var k = keyFromEvent(e);
+    log('baja  key=' + (e.key || '-') + ' keyCode=' + (e.keyCode || e.which) + (k ? '  → ' + k : '  (no usada)'));
+    if (!k) return;
+    e.preventDefault();
+    if (!e.repeat) press(k);
   });
-  return s;
-}
-
-function point(s, team) {
-  const o = 1 - team;
-  if (s.tb) {
-    s.pts[team]++;
-    if (s.pts[team] >= 7 && s.pts[team] - s.pts[o] >= 2) return winGame(s, team);
-    if ((s.pts[0] + s.pts[1]) % 6 === 0) s.flips++;
-    return;
-  }
-  const a = s.pts[team], b = s.pts[o];
-  if (s.mode === "oro") {
-    if (a >= 3 && (b < 3 || a === 3 && b === 3)) return winGame(s, team);
-    s.pts[team]++;
-  } else {
-    if (a >= 3 && a - b >= 1) return winGame(s, team);
-    s.pts[team]++;
-    if (s.pts[0] === 4 && s.pts[1] === 4) s.pts = [3, 3];
-  }
-}
-
-function winGame(s, team) {
-  const o = 1 - team, wasTb = s.tb;
-  s.games[team]++;
-  s.pts = [0, 0];
-  s.tb = false;
-  s.gameIdx++;
-  if (s.gameIdx % 2 === 1) s.flips++;
-  if (s.modeNext) { s.mode = s.modeNext; s.modeNext = null; }
-  const setWon = wasTb || (s.games[team] >= 6 && s.games[team] - s.games[o] >= 2);
-  if (setWon) {
-    s.setsWon[team]++;
-    s.sets.push(s.games.slice());
-    s.games = [0, 0];
-    s.gameIdx = 0;
-    if (s.setsWon[team] === 2) { s.over = true; s.winner = team; }
-  } else if (s.games[0] === 6 && s.games[1] === 6) {
-    s.tb = true;
-  }
-}
-
-function label(s, team) {
-  const p = s.pts[team];
-  if (s.tb) return String(p);
-  if (p === 4) return "AD";
-  return ["0", "15", "30", "40"][Math.min(p, 3)];
-}
-
-/* ---------- Estado y pantalla ---------- */
-const TEAMS = [
-  { name: "Pareja A", color: "var(--team-a)" },
-  { name: "Pareja B", color: "var(--team-b)" }
-];
-const STORE_KEY = "marcador-padel-v1";
-let data = { startMode: "oro", events: [] };
-try {
-  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
-  if (saved && Array.isArray(saved.events)) data = saved;
-} catch (e) {}
-function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) {} }
-
-const $ = id => document.getElementById(id);
-let toastTimer = null, statusTimer = null;
-
-function toast(msg) {
-  const t = $("toast");
-  t.textContent = msg;
-  t.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
-}
-
-function render(justScored) {
-  const s = compute(data.events, data.startMode);
-  const leftTeam = s.flips % 2 === 0 ? 0 : 1, rightTeam = 1 - leftTeam;
-  [["L", leftTeam], ["R", rightTeam]].forEach(([side, team]) => {
-    const t = TEAMS[team];
-    $("team" + side).innerHTML = '<span class="dot" style="background:' + t.color + '"></span>' + t.name;
-    $("pts" + side).textContent = label(s, team);
-    $("pts" + side).style.color = t.color;
-    $("games" + side).textContent = s.games[team];
+  document.addEventListener('keyup', function (e) {
+    var k = keyFromEvent(e);
+    if (!k) return;
+    e.preventDefault();
+    release(k);
   });
-  $("mode").textContent = MODES[s.mode] + (s.tb ? " · Tie-break" : "");
-  $("modeNext").hidden = !s.modeNext;
-  if (s.modeNext) $("modeNext").textContent = "Próximo juego: " + MODES[s.modeNext];
-  $("sets").innerHTML = s.sets.map(g =>
-    '<div class="set"><span class="a">' + g[0] + '</span><span class="b">' + g[1] + '</span></div>'
-  ).join("");
 
-  let status = "";
-  if (s.over) status = "Gana " + TEAMS[s.winner].name + " · Mantén 3 para nuevo partido";
-  else if (!s.tb && s.pts[0] === 3 && s.pts[1] === 3) status = s.mode === "oro" ? "Punto de oro" : "Iguales";
-  const st = $("status");
-  st.hidden = !status;
-  st.textContent = status;
-
-  if (justScored) {
-    const half = $(s.lastScorerSide === "R" ? "halfR" : "halfL");
-    half.classList.add("flash");
-    setTimeout(() => half.classList.remove("flash"), 450);
-    if (s.lastFlipAt === data.events.length - 1) toast("Cambio de lado");
-  }
-}
-
-/* ---------- Teclas: toque = acción, mantener = acción larga ---------- */
-const HOLD_MS = 2000;
-const pressed = {};
-
-function keyFromEvent(e) {
-  /* U y D son los dos botones de pareja: U hace lo mismo que 1 (izquierda) y D lo mismo que 2 (derecha) */
-  const map = { Digit1: "1", Numpad1: "1", KeyU: "1", Digit2: "2", Numpad2: "2", KeyD: "2", Digit3: "3", Numpad3: "3", Digit4: "4", Numpad4: "4" };
-  const byKey = { u: "1", d: "2" };
-  const k = (e.key || "").toLowerCase();
-  return map[e.code] || byKey[k] || (["1", "2", "3", "4"].includes(k) ? k : null);
-}
-
-function press(k) {
-  if (pressed[k]) return;
-  const bar = $("hold");
-  bar.style.transition = "none";
-  bar.style.transform = "scaleX(0)";
-  requestAnimationFrame(() => {
-    bar.style.transition = "transform " + HOLD_MS + "ms linear";
-    bar.style.transform = "scaleX(1)";
+  // Botones en pantalla: mouse y toque (los pointer events no existen en Chromium 47)
+  forEach(document.querySelectorAll('#keys button'), function (btn) {
+    var k = btn.getAttribute('data-key');
+    function down(e) { e.preventDefault(); press(k); }
+    function up() { release(k); }
+    btn.addEventListener('mousedown', down);
+    btn.addEventListener('touchstart', down);
+    btn.addEventListener('mouseup', up);
+    btn.addEventListener('mouseleave', up);
+    btn.addEventListener('touchend', up);
+    btn.addEventListener('touchcancel', up);
+    btn.addEventListener('keydown', function (e) { if (e.keyCode === 13 || e.keyCode === 32) e.preventDefault(); });
   });
-  pressed[k] = {
-    held: false,
-    timer: setTimeout(() => { pressed[k].held = true; resetBar(); longAction(k); }, HOLD_MS)
-  };
-}
 
-function release(k) {
-  const p = pressed[k];
-  if (!p) return;
-  clearTimeout(p.timer);
-  delete pressed[k];
-  resetBar();
-  if (!p.held) tapAction(k);
-}
-
-function resetBar() {
-  const bar = $("hold");
-  bar.style.transition = "none";
-  bar.style.transform = "scaleX(0)";
-}
-
-function tapAction(k) {
-  if (k === "1" || k === "2") {
-    data.events.push({ t: "p", side: k === "1" ? "L" : "R" });
-    save(); render(true);
-  } else if (k === "3") {
-    toast("Mantén 2 segundos para empezar un partido nuevo");
-  } else if (k === "4") {
-    const s = compute(data.events, data.startMode);
-    const current = s.modeNext || s.mode;
-    const next = current === "oro" ? "ventaja" : "oro";
-    if (data.events.length === 0) data.startMode = next;
-    else data.events.push({ t: "m", mode: next });
-    save(); render(false);
-    toast("Modo: " + MODES[next]);
+  // En la tele no salen los botones de prueba: se detecta por el navegador o con #tv.
+  // Con ?botones=1 se fuerzan a salir.
+  var IS_TV = /Tizen|SMART-TV|SmartTV|Web0S|webOS|NetCast|HbbTV|BRAVIA|AFT|GoogleTV|Android TV|CrKey/i.test(navigator.userAgent);
+  function applyHash() {
+    var show = /[?&]botones=1/.test(location.search) || (!IS_TV && location.hash !== '#tv');
+    $('keys').hidden = !show;
   }
-}
+  window.addEventListener('hashchange', applyHash);
+  applyHash();
+  log('tele: ' + (IS_TV ? 'sí' : 'no') + '  pantalla ' + window.innerWidth + 'x' + window.innerHeight);
 
-function longAction(k) {
-  if (k === "1" || k === "2") {
-    let i = data.events.length - 1;
-    while (i >= 0 && data.events[i].t !== "p") i--;
-    if (i < 0) { toast("No hay puntos para deshacer"); return; }
-    data.events.splice(i, 1);
-    save(); render(false);
-    toast("Último punto deshecho");
-  } else if (k === "3") {
-    const s = compute(data.events, data.startMode);
-    data = { startMode: s.modeNext || s.mode, events: [] };
-    save(); render(false);
-    toast("Partido nuevo");
-  } else if (k === "4") {
-    tapAction("4");
-  }
-}
+  // ================= SPONSORS (ejemplo; luego vienen de Supabase) =================
+  var SPONSORS = [
+    { text: 'Tu marca aquí · 15 s en todas las canchas', bg: '#f3d54e', fg: '#0d2a4a' },
+    { text: 'Reserva tu cancha en recepción', bg: '#e8eef6', fg: '#0d2a4a' },
+    { text: 'Torneo del club · sábado 8 pm', bg: '#ff8f70', fg: '#2a0f08' },
+    { text: 'Marcador por NOERION', bg: '#173e66', fg: '#e8eef6' }
+  ];
+  var sp = $('sponsor'), slides = [];
+  forEach(SPONSORS, function (x, i) {
+    var d = document.createElement('div');
+    d.className = 'slide' + (i === 0 ? ' on' : '');
+    d.style.background = x.bg;
+    d.style.color = x.fg;
+    d.textContent = x.text;
+    sp.appendChild(d);
+    slides.push(d);
+  });
+  var si = 0;
+  setInterval(function () {
+    slides[si].className = 'slide';
+    si = (si + 1) % slides.length;
+    slides[si].className = 'slide on';
+  }, 8000);
 
-document.addEventListener("keydown", e => {
-  const k = keyFromEvent(e);
-  if (!k) return;
-  e.preventDefault();
-  if (!e.repeat) press(k);
-});
-document.addEventListener("keyup", e => {
-  const k = keyFromEvent(e);
-  if (!k) return;
-  e.preventDefault();
-  release(k);
-});
-document.querySelectorAll(".keys button").forEach(btn => {
-  const k = btn.dataset.key;
-  btn.addEventListener("pointerdown", e => { e.preventDefault(); press(k); });
-  ["pointerup", "pointerleave", "pointercancel"].forEach(ev =>
-    btn.addEventListener(ev, () => release(k)));
-  btn.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") e.preventDefault(); });
-});
+  // Mantener la pantalla encendida si el navegador lo permite
+  try { if (navigator.wakeLock) navigator.wakeLock.request('screen')['catch'](function () {}); } catch (e) {}
 
-/* Modo TV: abre la página con #tv para ocultar los botones de prueba */
-function applyHash() { $("keys").hidden = location.hash === "#tv"; }
-window.addEventListener("hashchange", applyHash);
-applyHash();
-
-/* ---------- Sponsors (ejemplo; luego vienen de Supabase) ---------- */
-const SPONSORS = [
-  { text: "Tu marca aquí · 15 s en todas las canchas", bg: "#f3d54e", fg: "#0d2a4a" },
-  { text: "Reserva tu cancha en recepción", bg: "#e8eef6", fg: "#0d2a4a" },
-  { text: "Torneo del club · sábado 8 pm", bg: "#ff8f70", fg: "#2a0f08" },
-  { text: "Marcador por NOERION", bg: "#173e66", fg: "#e8eef6" }
-];
-const sp = $("sponsor");
-SPONSORS.forEach((x, i) => {
-  const d = document.createElement("div");
-  d.className = "slide" + (i === 0 ? " on" : "");
-  d.style.background = x.bg;
-  d.style.color = x.fg;
-  d.textContent = x.text;
-  sp.appendChild(d);
-});
-let si = 0;
-setInterval(() => {
-  const slides = sp.querySelectorAll(".slide");
-  slides[si].classList.remove("on");
-  si = (si + 1) % slides.length;
-  slides[si].classList.add("on");
-}, 8000);
-
-/* Mantener la pantalla encendida si el navegador lo permite */
-if (navigator.wakeLock) navigator.wakeLock.request("screen").catch(() => {});
-
-render(false);
+  render(false);
+})();
 </script>
+</body>
+</html>
